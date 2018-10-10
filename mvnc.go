@@ -177,7 +177,7 @@ func (f Graph) thread(reader io.Reader, detected chan<- string) {
 			log.Println(err)
 			return
 		} else if n < len(bb) {
-			log.Println("not enough data read")
+			log.Println("not enough data read: %d expected %d", n, len(bb))
 			return
 		}
 
