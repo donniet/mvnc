@@ -90,7 +90,7 @@ func (r *RawRGBImage) Bounds() image.Rectangle {
 	}
 }
 func (r *RawRGBImage) At(x, y int) color.Color {
-	pos := (x + y*r.width) * 3
+	pos := (x*r.height + y) * 3
 
 	return color.RGBA{
 		r.bytes[pos],
@@ -162,24 +162,24 @@ func (f Graph) thread(reader io.Reader, detected chan<- string) {
 	bout := make([]float32, fifoOutputSize/4)
 
 	for {
-		// cur := 0
-		// for {
-		// 	if n, err := reader.Read(bb[cur:]); err != nil {
-		// 		log.Println(err)
-		// 		return
-		// 	} else if cur+n == len(bb) {
-		// 		break
-		// 	} else {
-		// 		cur += n
-		// 	}
-		// }
-		if n, err := reader.Read(bb); err != nil {
-			log.Println(err)
-			return
-		} else if n < len(bb) {
-			log.Printf("not enough data read: %d expected %d", n, len(bb))
-			return
+		cur := 0
+		for {
+			if n, err := reader.Read(bb[cur:]); err != nil {
+				log.Println(err)
+				return
+			} else if cur+n == len(bb) {
+				break
+			} else {
+				cur += n
+			}
 		}
+		// if n, err := reader.Read(bb); err != nil {
+		// 	log.Println(err)
+		// 	return
+		// } else if n < len(bb) {
+		// 	log.Printf("not enough data read: %d expected %d", n, len(bb))
+		// 	return
+		// }
 
 		size := int(math.Sqrt(float64(len(bb) / 3)))
 		img := &RawRGBImage{
