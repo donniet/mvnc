@@ -90,7 +90,7 @@ func (r *RawRGBImage) Bounds() image.Rectangle {
 	}
 }
 func (r *RawRGBImage) At(x, y int) color.Color {
-	pos := (x*r.height + y) * 3
+	pos := (y*r.width + x) * 3
 
 	return color.RGBA{
 		r.bytes[pos],
@@ -225,7 +225,7 @@ func (f Graph) thread(reader io.Reader, detected chan<- string) {
 			return
 		}
 
-		log.Printf("mvnc: %v", bout)
+		// log.Printf("mvnc: %v", bout)
 
 		for i, r := range bout {
 			if n, ok := f.Names[i]; ok && r > f.Threshold {
