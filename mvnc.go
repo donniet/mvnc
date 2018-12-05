@@ -216,16 +216,7 @@ func (f *Graph) thread(float32 mean, float32 stddev, reader io.Reader, detected 
 			height: size,
 		}
 
-		go func() {
-			out, _ := os.OpenFile("test.jpg", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-			jpeg.Encode(out, img, &jpeg.Options{75})
-			out.Close()
 
-			f.lock.Lock()
-			defer f.lock.Unlock()
-
-			f.currentImage = img
-		}()
 
 		fifoWriteFillLevel := C.int(0)
 		fifoWriteFillLevelSize := C.uint(4)
@@ -247,6 +238,17 @@ func (f *Graph) thread(float32 mean, float32 stddev, reader io.Reader, detected 
 		for i, c := range bb {
 			input[i] = (float32(c) - mean) / stddev
 		}
+
+		go func() {
+			out, _ := os.OpenFile("test.jpg", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+			jpeg.Encode(out, img, &jpeg.Options{75})
+			out.Close()
+
+			f.lock.Lock()
+			defer f.lock.Unlock()
+
+			f.currentImage = img
+		}()
 
 		user := unsafe.Pointer(nil)
 
