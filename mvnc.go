@@ -53,7 +53,7 @@ func (f *Graph) Process(reader io.Reader) <-chan string {
 		f.Mean = 128.
 	}
 	if f.Stddev == 0. {
-		f.Stddev == 256.
+		f.Stddev = 256.
 	}
 
 	r := make(chan string)
@@ -128,7 +128,7 @@ func (r *RawRGBImage) At(x, y int) color.Color {
 	}
 }
 
-func (f *Graph) thread(float32 mean, float32 stddev, reader io.Reader, detected chan<- string) {
+func (f *Graph) thread(mean float32, stddev float32, reader io.Reader, detected chan<- string) {
 	last := time.Now()
 
 	defer close(detected)
