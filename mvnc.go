@@ -18,6 +18,7 @@ import (
 	"os"
 	"time"
 	"unsafe"
+	"sync"
 )
 
 type Graph struct {
@@ -25,12 +26,39 @@ type Graph struct {
 	Names     map[int]string
 	Threshold float32
 	Throttle  time.Duration
+	Mean float32
+	Stddev float32
+	currentImage image.Image
+	lock sync.Locker
 }
 
-func (f Graph) Process(reader io.Reader) <-chan string {
+func (f *Graph) Image() image.Image {
+	if f.lock == nil {
+		return nil
+	}
+
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	return f.currentImage
+}
+
+func (f *Graph) Process(reader io.Reader) <-chan string {
+	if f.lock != nil {
+		panic(fmt.Errorf("can only call Process once on a graph"))
+	}
+
+	f.lock = &sync.Mutex{}
+	if f.Mean == 0. {
+		f.Mean = 128.
+	}
+	if f.Stddev == 0. {
+		f.Stddev == 256.
+	}
+
 	r := make(chan string)
 
-	go f.thread(reader, r)
+	go f.thread(f.Mean, f.Stddev, reader, r)
 
 	return r
 }
@@ -100,7 +128,7 @@ func (r *RawRGBImage) At(x, y int) color.Color {
 	}
 }
 
-func (f Graph) thread(reader io.Reader, detected chan<- string) {
+func (f *Graph) thread(float32 mean, float32 stddev, reader io.Reader, detected chan<- string) {
 	last := time.Now()
 
 	defer close(detected)
@@ -187,9 +215,17 @@ func (f Graph) thread(reader io.Reader, detected chan<- string) {
 			width:  size,
 			height: size,
 		}
-		out, _ := os.OpenFile("test.jpg", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-		jpeg.Encode(out, img, &jpeg.Options{75})
-		out.Close()
+
+		go func() {
+			out, _ := os.OpenFile("test.jpg", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+			jpeg.Encode(out, img, &jpeg.Options{75})
+			out.Close()
+
+			f.lock.Lock()
+			defer f.lock.Unlock()
+
+			f.currentImage = img
+		}()
 
 		fifoWriteFillLevel := C.int(0)
 		fifoWriteFillLevelSize := C.uint(4)
@@ -209,7 +245,7 @@ func (f Graph) thread(reader io.Reader, detected chan<- string) {
 
 		// convert bytes read in into floats for the movidius-- I wish we could do this on the device...
 		for i, c := range bb {
-			input[i] = (float32(c) - 128.0) / 256.0
+			input[i] = (float32(c) - mean) / stddev
 		}
 
 		user := unsafe.Pointer(nil)
